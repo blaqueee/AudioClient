@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'dart:io';
+
+import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../../domain/repositories/connection_repository.dart';
 
 class ConnectionRepositoryImpl implements ConnectionRepository {
   WebSocketChannel? _webSocketChannel;
