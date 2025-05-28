@@ -1,14 +1,22 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_client/domain/repositories/connection_repository.dart';
+import 'package:audio_client/service/network_audio_source.dart';
+import 'package:just_audio/just_audio.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
+
 
 class ConnectionRepositoryImpl implements ConnectionRepository {
   WebSocketChannel? _webSocketChannel;
   Socket? _tcpSocket;
   StreamSubscription? _wsStreamSubscription;
+
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  StreamController<List<int>>? _audioStreamController;
+  final String _audioContentType = 'audio/mpeg';
 
   @override
   Future<void> connectWebSocket(String url) async {
@@ -87,6 +95,27 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
 
     try {
       _tcpSocket = await Socket.connect(host, port, timeout: const Duration(seconds: 7));
+      _audioStreamController = StreamController<List<int>>();
+
+      _tcpSocket!.listen(
+            (Uint8List data) {
+          if (_audioStreamController != null && !_audioStreamController!.isClosed) {
+            _audioStreamController!.add(data);
+          }
+        },
+        onError: (error, stackTrace) {},
+        onDone: () {},
+        cancelOnError: true,
+      );
+
+      final audioSource = NetworkAudioSource(
+        _audioStreamController!.stream,
+        contentType: _audioContentType,
+      );
+
+      await _audioPlayer.setAudioSource(audioSource, preload: false);
+      _audioPlayer.play();
+
     } catch (e) {
       _tcpSocket = null;
       rethrow;
