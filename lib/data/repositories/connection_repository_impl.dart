@@ -8,7 +8,6 @@ import 'package:just_audio/just_audio.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-
 class ConnectionRepositoryImpl implements ConnectionRepository {
   WebSocketChannel? _webSocketChannel;
   Socket? _tcpSocket;
@@ -20,7 +19,6 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
 
   @override
   Future<void> connectWebSocket(String url) async {
-
     final completer = Completer<void>();
     const Duration connectionTimeout = Duration(seconds: 7);
 
@@ -28,49 +26,76 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
       _webSocketChannel = WebSocketChannel.connect(Uri.parse(url));
 
       _wsStreamSubscription = _webSocketChannel!.stream.listen(
-            (message) {
+        (message) {
           if (!completer.isCompleted) {
             completer.complete();
           }
         },
         onError: (error) {
           if (!completer.isCompleted) {
-            completer.completeError(Exception('WebSocket stream error: $error'));
+            completer.completeError(
+              Exception('WebSocket stream error: $error'),
+            );
           }
         },
         onDone: () {
           if (!completer.isCompleted) {
-            if (_webSocketChannel?.closeCode != null && _webSocketChannel?.closeCode != status.normalClosure) {
-              completer.completeError(Exception('WebSocket connection closed with code: ${_webSocketChannel?.closeCode}'));
+            if (_webSocketChannel?.closeCode != null &&
+                _webSocketChannel?.closeCode != status.normalClosure) {
+              completer.completeError(
+                Exception(
+                  'WebSocket connection closed with code: ${_webSocketChannel?.closeCode}',
+                ),
+              );
             } else {
-              completer.completeError(Exception('The WebSocket stream was closed without explicit confirmation of the connection being established'));
+              completer.completeError(
+                Exception(
+                  'The WebSocket stream was closed without explicit confirmation of the connection being established',
+                ),
+              );
             }
           }
         },
       );
 
-      _webSocketChannel!.sink.done.then((_) {
-        if (!completer.isCompleted && _webSocketChannel?.closeCode != status.normalClosure) {
-          completer.completeError(Exception('Sink WebSocket finished with error, code: ${_webSocketChannel?.closeCode}'));
-        }
-      }).catchError((error) {
-        if (!completer.isCompleted) {
-          completer.completeError(Exception('Error Sink WebSocket: $error'));
-        }
-      });
+      _webSocketChannel!.sink.done
+          .then((_) {
+            if (!completer.isCompleted &&
+                _webSocketChannel?.closeCode != status.normalClosure) {
+              completer.completeError(
+                Exception(
+                  'Sink WebSocket finished with error, code: ${_webSocketChannel?.closeCode}',
+                ),
+              );
+            }
+          })
+          .catchError((error) {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                Exception('Error Sink WebSocket: $error'),
+              );
+            }
+          });
 
-      await completer.future.timeout(connectionTimeout, onTimeout: () {
-        _wsStreamSubscription?.cancel();
-        _wsStreamSubscription = null;
-        _webSocketChannel?.sink.close(status.goingAway, 'Client timeout').catchError((_) {});
-        _webSocketChannel = null;
-        throw TimeoutException('WebSocket connection timeout', connectionTimeout);
-      });
-
+      await completer.future.timeout(
+        connectionTimeout,
+        onTimeout: () {
+          _wsStreamSubscription?.cancel();
+          _wsStreamSubscription = null;
+          _webSocketChannel?.sink
+              .close(status.goingAway, 'Client timeout')
+              .catchError((_) {});
+          _webSocketChannel = null;
+          throw TimeoutException(
+            'WebSocket connection timeout',
+            connectionTimeout,
+          );
+        },
+      );
     } catch (e) {
       await _wsStreamSubscription?.cancel();
       _wsStreamSubscription = null;
-      _webSocketChannel?.sink.close().catchError((_){});
+      _webSocketChannel?.sink.close().catchError((_) {});
       _webSocketChannel = null;
       rethrow;
     }
@@ -94,17 +119,26 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
     await disconnectTcp();
 
     try {
-      _tcpSocket = await Socket.connect(host, port, timeout: const Duration(seconds: 7));
+      _tcpSocket = await Socket.connect(
+        host,
+        port,
+        timeout: const Duration(seconds: 7),
+      );
       _audioStreamController = StreamController<List<int>>();
 
       _tcpSocket!.listen(
-            (Uint8List data) {
-          if (_audioStreamController != null && !_audioStreamController!.isClosed) {
+        (Uint8List data) {
+          if (_audioStreamController != null &&
+              !_audioStreamController!.isClosed) {
             _audioStreamController!.add(data);
           }
         },
-        onError: (error, stackTrace) {},
-        onDone: () {},
+        onError: (error, stackTrace) {
+          _audioStreamController?.close();
+        },
+        onDone: () {
+          _audioStreamController?.close();
+        },
         cancelOnError: true,
       );
 
@@ -113,9 +147,26 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
         contentType: _audioContentType,
       );
 
-      await _audioPlayer.setAudioSource(audioSource, preload: false);
-      _audioPlayer.play();
+      _audioPlayer.playerStateStream.listen((playerState) {
+        print(
+          'Player state: ${playerState.processingState}, playing: ${playerState.playing}',
+        );
+        if (playerState.processingState == ProcessingState.completed) {
+          print("Player stopped playing");
+        }
+      });
 
+      _audioPlayer.playbackEventStream.listen(
+        (event) {},
+        onError: (Object e, StackTrace st) {
+          print('Error in playbackEventStream: $e');
+        },
+      );
+
+      await _audioPlayer.setAudioSource(audioSource, preload: false);
+      print('Audio source setup. Starting to play...');
+      _audioPlayer.play();
+      print('play() called.');
     } catch (e) {
       _tcpSocket = null;
       rethrow;
@@ -138,5 +189,4 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
     await disconnectWebSocket();
     await disconnectTcp();
   }
-
 }

@@ -27,8 +27,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _bloc = getIt<ConnectionBloc>();
 
-    _wsController.text = 'ws://127.0.0.1:8080/ws';
-    _tcpController.text = '127.0.0.1:12345';
+    _wsController.text = 'wss://echo.websocket.org';
+    _tcpController.text = 'localhost:12346';
     if (_backendListItems.isNotEmpty) {
       _selectedItem = _backendListItems.first;
     }
