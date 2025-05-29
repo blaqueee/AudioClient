@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:audio_client/di.dart';
+import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:audio_client/presentation/bloc/connection_event.dart';
 import 'package:audio_client/presentation/bloc/connection_state.dart';
+import 'package:audio_client/presentation/bloc/websocket_bloc.dart';
+import 'package:audio_client/presentation/bloc/websocket_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -20,18 +25,32 @@ class _HomePageState extends State<HomePage> {
   final List<String> _backendListItems = ["Профиль A", "Профиль B", "Стандартный"];
   String? _selectedItem;
 
-  late final ConnectionBloc _bloc;
+  late final ConnectionBloc _connectionBloc;
+  late final WebSocketBloc _webSocketBloc;
+  StreamSubscription? _webSocketSubscription;
 
   @override
   void initState() {
     super.initState();
-    _bloc = getIt<ConnectionBloc>();
+    _connectionBloc = getIt<ConnectionBloc>();
+    _webSocketBloc = getIt<WebSocketBloc>();
 
-    _wsController.text = 'wss://echo.websocket.org';
+    _wsController.text = 'ws://127.0.0.1:8887';
     _tcpController.text = 'localhost:12346';
     if (_backendListItems.isNotEmpty) {
       _selectedItem = _backendListItems.first;
     }
+
+    _setupWebSocketListener();
+  }
+
+  void _setupWebSocketListener() {
+    final repository = getIt<ConnectionRepository>();
+    _webSocketSubscription = repository.webSocketStream.listen(
+      (message) {
+        _webSocketBloc.add(WebSocketMessageReceived(message.toString()));
+      },
+    );
   }
 
   void _handleConnect() {
@@ -55,7 +74,7 @@ class _HomePageState extends State<HomePage> {
       return;
     }
 
-    _bloc.add(ConnectAllRequested(
+    _connectionBloc.add(ConnectAllRequested(
       wsUrl: wsUrl,
       tcpAddress: tcpAddress,
       selectedListItem: _selectedItem!,
@@ -70,7 +89,7 @@ class _HomePageState extends State<HomePage> {
       _showErrorSnackbar('All fields must be filled correctly');
       return;
     }
-    _bloc.add(ReconnectAllRequested(
+    _connectionBloc.add(ReconnectAllRequested(
       wsUrl: wsUrl,
       tcpAddress: tcpAddress,
       selectedListItem: _selectedItem!,
@@ -78,7 +97,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleDisconnect() {
-    _bloc.add(DisconnectAllRequested());
+    _connectionBloc.add(DisconnectAllRequested());
   }
 
   bool _isValidTcpAddress(String address) {
@@ -120,7 +139,7 @@ class _HomePageState extends State<HomePage> {
             boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
           ),
           child: BlocBuilder<ConnectionBloc, ConnectionStatusState>(
-            bloc: _bloc,
+            bloc: _connectionBloc,
             builder: (context, state) {
               bool canInteract = !state.isAnyConnecting;
               bool canConnect = canInteract && !state.isFullyConnected;
@@ -245,6 +264,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _wsController.dispose();
     _tcpController.dispose();
+    _webSocketSubscription?.cancel();
     super.dispose();
   }
 }

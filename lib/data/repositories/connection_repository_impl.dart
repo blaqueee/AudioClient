@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:audio_client/domain/repositories/connection_repository.dart';
-import 'package:audio_client/service/network_audio_source.dart';
+import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -12,26 +11,33 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
   WebSocketChannel? _webSocketChannel;
   Socket? _tcpSocket;
   StreamSubscription? _wsStreamSubscription;
+  final _webSocketController = StreamController<dynamic>.broadcast();
 
   final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamController<List<int>>? _audioStreamController;
-  final String _audioContentType = 'audio/mpeg';
+  ProcessingState? processingState;
+
+  @override
+  Stream<dynamic> get webSocketStream => _webSocketController.stream;
 
   @override
   Future<void> connectWebSocket(String url) async {
     final completer = Completer<void>();
-    const Duration connectionTimeout = Duration(seconds: 7);
 
     try {
-      _webSocketChannel = WebSocketChannel.connect(Uri.parse(url));
+      final uri = Uri.parse(url);
+
+      _webSocketChannel = WebSocketChannel.connect(
+        uri,
+      );
 
       _wsStreamSubscription = _webSocketChannel!.stream.listen(
         (message) {
           if (!completer.isCompleted) {
             completer.complete();
           }
+          _webSocketController.add(message);
         },
-        onError: (error) {
+        onError: (error, stackTrace) {
           if (!completer.isCompleted) {
             completer.completeError(
               Exception('WebSocket stream error: $error'),
@@ -58,45 +64,29 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
         },
       );
 
-      _webSocketChannel!.sink.done
-          .then((_) {
-            if (!completer.isCompleted &&
-                _webSocketChannel?.closeCode != status.normalClosure) {
-              completer.completeError(
-                Exception(
-                  'Sink WebSocket finished with error, code: ${_webSocketChannel?.closeCode}',
-                ),
-              );
-            }
-          })
-          .catchError((error) {
-            if (!completer.isCompleted) {
-              completer.completeError(
-                Exception('Error Sink WebSocket: $error'),
-              );
-            }
-          });
-
-      await completer.future.timeout(
-        connectionTimeout,
-        onTimeout: () {
-          _wsStreamSubscription?.cancel();
-          _wsStreamSubscription = null;
-          _webSocketChannel?.sink
-              .close(status.goingAway, 'Client timeout')
-              .catchError((_) {});
-          _webSocketChannel = null;
-          throw TimeoutException(
-            'WebSocket connection timeout',
-            connectionTimeout,
-          );
-        },
-      );
-    } catch (e) {
+    } catch (e, stackTrace) {
       await _wsStreamSubscription?.cancel();
       _wsStreamSubscription = null;
       _webSocketChannel?.sink.close().catchError((_) {});
       _webSocketChannel = null;
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> playAudio(String url) async {
+    try {
+      final session = await AudioSession.instance;
+      await session.configure(AudioSessionConfiguration.speech());
+
+      _audioPlayer.errorStream.listen((e) {
+        print('A stream error occurred: $e');
+      });
+
+      await _audioPlayer.setAudioSource(AudioSource.uri(Uri.parse(url)));
+      await _audioPlayer.play();
+
+    } catch (e) {
       rethrow;
     }
   }
@@ -112,6 +102,7 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
       await _webSocketChannel?.sink.close(status.normalClosure);
     } catch (e) {}
     _webSocketChannel = null;
+    await _webSocketController.close();
   }
 
   @override
@@ -124,49 +115,7 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
         port,
         timeout: const Duration(seconds: 7),
       );
-      _audioStreamController = StreamController<List<int>>();
-
-      _tcpSocket!.listen(
-        (Uint8List data) {
-          if (_audioStreamController != null &&
-              !_audioStreamController!.isClosed) {
-            _audioStreamController!.add(data);
-          }
-        },
-        onError: (error, stackTrace) {
-          _audioStreamController?.close();
-        },
-        onDone: () {
-          _audioStreamController?.close();
-        },
-        cancelOnError: true,
-      );
-
-      final audioSource = NetworkAudioSource(
-        _audioStreamController!.stream,
-        contentType: _audioContentType,
-      );
-
-      _audioPlayer.playerStateStream.listen((playerState) {
-        print(
-          'Player state: ${playerState.processingState}, playing: ${playerState.playing}',
-        );
-        if (playerState.processingState == ProcessingState.completed) {
-          print("Player stopped playing");
-        }
-      });
-
-      _audioPlayer.playbackEventStream.listen(
-        (event) {},
-        onError: (Object e, StackTrace st) {
-          print('Error in playbackEventStream: $e');
-        },
-      );
-
-      await _audioPlayer.setAudioSource(audioSource, preload: false);
-      print('Audio source setup. Starting to play...');
-      _audioPlayer.play();
-      print('play() called.');
+      print('TCP connection established to $host:$port');
     } catch (e) {
       _tcpSocket = null;
       rethrow;
