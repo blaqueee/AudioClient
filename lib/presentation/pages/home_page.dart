@@ -6,8 +6,10 @@ import 'package:audio_client/presentation/bloc/connection_event.dart';
 import 'package:audio_client/presentation/bloc/connection_state.dart';
 import 'package:audio_client/presentation/bloc/websocket_bloc.dart';
 import 'package:audio_client/presentation/bloc/websocket_event.dart';
+import 'package:audio_client/presentation/components/customs_office_tree.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_treeview/flutter_treeview.dart';
 
 import '../bloc/connection_bloc.dart';
 
@@ -21,6 +23,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _wsController = TextEditingController();
   final TextEditingController _tcpController = TextEditingController();
+
+  final TreeViewController _treeController = TreeViewController(children: []);
+  String? _selectedNode;
+
 
   final List<String> _backendListItems = ["Профиль A", "Профиль B", "Стандартный"];
   String? _selectedItem;
@@ -186,16 +192,7 @@ class _HomePageState extends State<HomePage> {
 
                   SizedBox(
                     height: 60,
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedItem,
-                      onChanged: canInteract ? (value) => setState(() => _selectedItem = value) : null,
-                      items: _backendListItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'Client placement',
-                        border: OutlineInputBorder(),
-                      ),
-                      isExpanded: true,
-                    ),
+                    child: CustomsOfficeTree()
                   ),
                   const SizedBox(height: 24),
 
