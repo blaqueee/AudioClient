@@ -1,3 +1,4 @@
+import 'package:audio_client/data/datasources/connection_datasource.dart';
 import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:audio_client/presentation/bloc/connection_event.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,12 +7,13 @@ import 'connection_state.dart';
 
 class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
   final ConnectionRepository repository;
+  final ConnectionDataSource dataSource;
 
   String? _lastWsUrl;
   String? _lastTcpAddress;
   String? _lastSelectedItem;
 
-  ConnectionBloc(this.repository) : super(const ConnectionStatusState()) {
+  ConnectionBloc(this.repository, this.dataSource) : super(const ConnectionStatusState()) {
     on<ConnectAllRequested>(_onConnectAllRequested);
     on<ReconnectAllRequested>(_onReconnectAllRequested);
     on<DisconnectAllRequested>(_onDisconnectAllRequested);
@@ -59,6 +61,7 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
 
     bool wsSuccess = false;
     try {
+      await dataSource.signIn(url: wsUrl);
       await repository.connectWebSocket(wsUrl);
       wsSuccess = true;
       emit(state.copyWith(wsStatus: SocketStatus.connected, wsUrl: wsUrl));
