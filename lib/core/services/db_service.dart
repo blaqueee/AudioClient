@@ -48,7 +48,7 @@ class DBService {
   }
 
 
-  static Future<dynamic> get(String key, { bool encrypted = false }) async {
+  static Future<dynamic> get(String key) async {
 
     try {
       return DBService._cache.get(key);
@@ -70,7 +70,7 @@ class DBService {
   }
 
 
-  static Future<void> remove(String key, { bool encrypted = false }) async {
+  static Future<void> remove(String key) async {
     try {
       await DBService._cache.remove(key);
     }

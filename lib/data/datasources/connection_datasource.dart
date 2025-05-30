@@ -1,3 +1,3 @@
 abstract class ConnectionDataSource {
-  Future<void> signIn();
+  Future<void> signIn({ required String url });
 }

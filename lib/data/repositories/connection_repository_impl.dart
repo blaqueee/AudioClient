@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:audio_client/core/services/db_service.dart';
 import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -26,8 +28,14 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
     try {
       final uri = Uri.parse(url);
 
-      _webSocketChannel = WebSocketChannel.connect(
+      var jsessionid = await DBService.get("JSESSIONID");
+      var csrfToken = await DBService.get("CSRF-TOKEN");
+
+      _webSocketChannel = IOWebSocketChannel.connect(
         uri,
+        headers: {
+          'Cookie': 'JSESSIONID=$jsessionid;CSRF-TOKEN=$csrfToken'
+        },
       );
 
       _wsStreamSubscription = _webSocketChannel!.stream.listen(

@@ -1,3 +1,6 @@
+import 'package:audio_client/core/services/dio_service.dart';
+import 'package:audio_client/data/datasources/connection_datasource.dart';
+import 'package:audio_client/data/datasources/impl/connection_datasource_impl.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,9 +30,16 @@ Future<void> configureDependencies() async {
 
   // Blocs
   getIt.registerFactory(
-    () => ConnectionBloc(getIt<ConnectionRepository>()),
+    () => ConnectionBloc(getIt<ConnectionRepository>(), getIt<ConnectionDataSource>()),
   );
   getIt.registerFactory(
     () => WebSocketBloc(getIt<HandleCommandUseCase>()),
   );
+
+  // Data sources
+  getIt.registerLazySingleton<ConnectionDataSource>(
+    () => ConnectionDataSourceImpl(dio: DioService.dio)
+  );
+
+
 }
