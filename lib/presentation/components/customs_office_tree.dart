@@ -1,6 +1,4 @@
 import 'package:audio_client/di.dart';
-import 'package:audio_client/domain/usecases/fetch_child_customs_offices_usecase.dart';
-import 'package:audio_client/domain/usecases/fetch_root_customs_offices_usecase.dart';
 import 'package:audio_client/presentation/bloc/customs_office_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,46 +9,42 @@ class CustomsOfficeTree extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => CustomsOfficeTreeCubit(
-        fetchRootNodesUseCase: getIt<FetchRootCustomsOfficesUseCase>(),
-        fetchChildNodesUseCase: getIt<FetchChildCustomsOfficesUseCase>(),
-      )..loadRootNodes(),
-      child: BlocBuilder<CustomsOfficeTreeCubit, TreeViewController>(
-        builder: (context, controller) {
-          return TreeView(
-            controller: controller,
-            allowParentSelect: false,
-            supportParentDoubleTap: false,
-            onNodeTap: (key) {
-              context.read<CustomsOfficeTreeCubit>().toggleNode(key);
+    return AlertDialog(
+      title: const Text('Select placement'),
+      content: SizedBox(
+        width: 400,
+        height: 300,
+        child: BlocProvider(
+          create: (_) => getIt<CustomsOfficeTreeCubit>()..loadRootNodes(),
+          child: BlocBuilder<CustomsOfficeTreeCubit, TreeViewController>(
+            builder: (context, controller) {
+              return TreeView(
+                controller: controller,
+                allowParentSelect: true,
+                supportParentDoubleTap: false,
+                onNodeTap: (key) {
+                  context.read<CustomsOfficeTreeCubit>().toggleNode(key);
+                },
+                onNodeDoubleTap: (key) {
+                  final node = controller.getNode(key);
+                  if (node != null) {
+                    Navigator.of(context).pop({
+                      'label': node.label,
+                      'id': node.key
+                    });
+                  }
+                },
+              );
             },
-            theme: TreeViewTheme(
-              expanderTheme: ExpanderThemeData(
-                type: ExpanderType.caret,
-                modifier: ExpanderModifier.none,
-                position: ExpanderPosition.start,
-                size: 20,
-                color: Colors.blue,
-              ),
-              labelStyle: TextStyle(
-                fontSize: 16,
-                letterSpacing: 0.3,
-              ),
-              parentLabelStyle: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.1,
-              ),
-              iconTheme: IconThemeData(
-                size: 18,
-                color: Colors.grey[700],
-              ),
-              colorScheme: ColorScheme.light(),
-            ),
-          );
-        },
+          ),
+        ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        )
+      ],
     );
   }
 }
