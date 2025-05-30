@@ -14,7 +14,7 @@ class ConnectionDataSourceImpl extends ConnectionDataSource {
     try {
       String httpUrl = getHttpFromWs(url);
 
-      dio.options = BaseOptions(baseUrl: httpUrl);
+      dio.options.baseUrl = httpUrl;
 
       var userData = convertStringToMap(Environment.WEBSOCKET_USER);
 

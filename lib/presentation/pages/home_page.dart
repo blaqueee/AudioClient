@@ -1,13 +1,18 @@
 import 'dart:async';
 
+import 'package:audio_client/core/services/dio_service.dart';
+import 'package:audio_client/core/utils/methods.dart';
 import 'package:audio_client/di.dart';
 import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:audio_client/presentation/bloc/connection_event.dart';
 import 'package:audio_client/presentation/bloc/connection_state.dart';
 import 'package:audio_client/presentation/bloc/websocket_bloc.dart';
 import 'package:audio_client/presentation/bloc/websocket_event.dart';
+import 'package:audio_client/presentation/components/customs_office_selector.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_treeview/flutter_treeview.dart';
 
 import '../bloc/connection_bloc.dart';
 
@@ -21,9 +26,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final TextEditingController _wsController = TextEditingController();
   final TextEditingController _tcpController = TextEditingController();
+  final Dio dio = DioService.dio;
 
-  final List<String> _backendListItems = ["Профиль A", "Профиль B", "Стандартный"];
-  String? _selectedItem;
+  final TreeViewController _treeController = TreeViewController(children: []);
+  String? _selectedCustomsOfficeId;
 
   late final ConnectionBloc _connectionBloc;
   late final WebSocketBloc _webSocketBloc;
@@ -35,11 +41,14 @@ class _HomePageState extends State<HomePage> {
     _connectionBloc = getIt<ConnectionBloc>();
     _webSocketBloc = getIt<WebSocketBloc>();
 
-    _wsController.text = 'ws://127.0.0.1:8887';
+    _wsController.addListener(() {
+      if (_wsController.text.isEmpty) return;
+      String httpUrl = getHttpFromWs(_wsController.text);
+      dio.options.baseUrl = httpUrl;
+    });
+    _wsController.text = 'ws://172.18.23.43:8080/open-platform-demo/web-socket-endpoint';
+
     _tcpController.text = 'localhost:12346';
-    if (_backendListItems.isNotEmpty) {
-      _selectedItem = _backendListItems.first;
-    }
 
     _setupWebSocketListener();
   }
@@ -54,7 +63,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _handleConnect() {
-    final String wsUrl = _wsController.text.trim();
+    final String wsUrl = '${_wsController.text.trim()}?id=$_selectedCustomsOfficeId';
     final String tcpAddress = _tcpController.text.trim();
 
     if (wsUrl.isEmpty) {
@@ -65,8 +74,8 @@ class _HomePageState extends State<HomePage> {
       _showErrorSnackbar('Please, enter TCP address (host:port)');
       return;
     }
-    if (_selectedItem == null || _selectedItem!.isEmpty) {
-      _showErrorSnackbar('Please, select from the list');
+    if (_selectedCustomsOfficeId == null || _selectedCustomsOfficeId!.isEmpty) {
+      _showErrorSnackbar('Please, select from the tree');
       return;
     }
     if (!_isValidTcpAddress(tcpAddress)) {
@@ -77,7 +86,7 @@ class _HomePageState extends State<HomePage> {
     _connectionBloc.add(ConnectAllRequested(
       wsUrl: wsUrl,
       tcpAddress: tcpAddress,
-      selectedListItem: _selectedItem!,
+      selectedListItem: _selectedCustomsOfficeId!,
     ));
   }
 
@@ -85,14 +94,14 @@ class _HomePageState extends State<HomePage> {
     final String wsUrl = _wsController.text.trim();
     final String tcpAddress = _tcpController.text.trim();
 
-    if (wsUrl.isEmpty || tcpAddress.isEmpty || _selectedItem == null || _selectedItem!.isEmpty || !_isValidTcpAddress(tcpAddress)) {
+    if (wsUrl.isEmpty || tcpAddress.isEmpty || _selectedCustomsOfficeId == null || _selectedCustomsOfficeId!.isEmpty || !_isValidTcpAddress(tcpAddress)) {
       _showErrorSnackbar('All fields must be filled correctly');
       return;
     }
     _connectionBloc.add(ReconnectAllRequested(
       wsUrl: wsUrl,
       tcpAddress: tcpAddress,
-      selectedListItem: _selectedItem!,
+      selectedListItem: _selectedCustomsOfficeId!,
     ));
   }
 
@@ -186,16 +195,13 @@ class _HomePageState extends State<HomePage> {
 
                   SizedBox(
                     height: 60,
-                    child: DropdownButtonFormField<String>(
-                      value: _selectedItem,
-                      onChanged: canInteract ? (value) => setState(() => _selectedItem = value) : null,
-                      items: _backendListItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-                      decoration: const InputDecoration(
-                        labelText: 'Client placement',
-                        border: OutlineInputBorder(),
-                      ),
-                      isExpanded: true,
-                    ),
+                    child: CustomsOfficeSelector(
+                      onSelectionChanged: (label, id) {
+                        setState(() {
+                          _selectedCustomsOfficeId = id;
+                        });
+                      },
+                    )
                   ),
                   const SizedBox(height: 24),
 

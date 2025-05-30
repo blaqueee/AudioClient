@@ -275,6 +275,13 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_treeview:
+    dependency: "direct main"
+    description:
+      path: "patched_packages/flutter_treeview"
+      relative: true
+    source: path
+    version: "1.0.7+1"
   flutter_web_plugins:
     dependency: transitive
     description: flutter
