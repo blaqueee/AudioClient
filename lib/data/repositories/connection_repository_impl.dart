@@ -76,6 +76,8 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
   @override
   Future<void> playAudio(String url) async {
     try {
+      await _audioPlayer.stop();
+
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration.speech());
 
