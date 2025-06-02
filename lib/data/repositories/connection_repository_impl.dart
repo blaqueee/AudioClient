@@ -89,9 +89,6 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
       final session = await AudioSession.instance;
       await session.configure(AudioSessionConfiguration.speech());
 
-      _audioPlayer.errorStream.listen((e) {
-        print('A stream error occurred: $e');
-      });
 
       await _audioPlayer.setAudioSource(AudioSource.uri(Uri.parse(url)));
       await _audioPlayer.play();
