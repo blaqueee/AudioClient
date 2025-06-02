@@ -26,7 +26,7 @@ Future<void> configureDependencies() async {
   );
 
   // Repositories
-  getIt.registerLazySingleton<ConnectionRepository>(() => ConnectionRepositoryImpl());
+  getIt.registerLazySingleton<ConnectionRepository>(() => ConnectionRepositoryImpl(dataSource: getIt.call()));
   getIt.registerLazySingleton<CustomsOfficeRepository>(() => CustomsOfficeRepositoryImpl(dataSource: getIt.call()));
 
   // Use cases
@@ -35,7 +35,7 @@ Future<void> configureDependencies() async {
   getIt.registerLazySingleton(() => FetchRootCustomsOfficesUseCase(getIt.call()));
 
   // Blocs
-  getIt.registerFactory(() => ConnectionBloc(getIt<ConnectionRepository>(), getIt<ConnectionDataSource>()));
+  getIt.registerFactory(() => ConnectionBloc(getIt<ConnectionRepository>()));
   getIt.registerFactory(() => WebSocketBloc(getIt<HandleCommandUseCase>()));
   getIt.registerFactory(() => CustomsOfficeTreeCubit(
       fetchChildNodesUseCase: getIt.call(),

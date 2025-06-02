@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_client/core/services/db_service.dart';
+import 'package:audio_client/data/datasources/connection_datasource.dart';
 import 'package:audio_client/domain/repositories/connection_repository.dart';
 import 'package:audio_session/audio_session.dart';
 import 'package:just_audio/just_audio.dart';
@@ -10,10 +11,17 @@ import 'package:web_socket_channel/status.dart' as status;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 class ConnectionRepositoryImpl implements ConnectionRepository {
+  final ConnectionDataSource dataSource;
+
+  ConnectionRepositoryImpl({ required this.dataSource });
+
   WebSocketChannel? _webSocketChannel;
   Socket? _tcpSocket;
   StreamSubscription? _wsStreamSubscription;
   final _webSocketController = StreamController<dynamic>.broadcast();
+  Timer? _reconnectTimer;
+  String? _lastWebSocketUrl;
+  bool _manuallyDisconnected = false;
 
   final AudioPlayer _audioPlayer = AudioPlayer();
   ProcessingState? processingState;
@@ -23,11 +31,14 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
 
   @override
   Future<void> connectWebSocket(String url) async {
+    await dataSource.signIn(url: url);
+
+    _lastWebSocketUrl = url;
+    _manuallyDisconnected = false;
     final completer = Completer<void>();
 
     try {
       final uri = Uri.parse(url);
-
       var jsessionid = await DBService.get("JSESSIONID");
       var csrfToken = await DBService.get("CSRF-TOKEN");
 
@@ -38,48 +49,45 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
         },
       );
 
+      Timer(const Duration(seconds: 2), () {
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      });
+
       _wsStreamSubscription = _webSocketChannel!.stream.listen(
-        (message) {
+            (message) {
           if (!completer.isCompleted) {
             completer.complete();
           }
           _webSocketController.add(message);
         },
-        onError: (error, stackTrace) {
+        onError: (error) {
           if (!completer.isCompleted) {
             completer.completeError(
-              Exception('WebSocket stream error: $error'),
-            );
+                Exception('WebSocket stream error: $error'));
           }
+          _scheduleReconnect();
         },
         onDone: () {
           if (!completer.isCompleted) {
-            if (_webSocketChannel?.closeCode != null &&
-                _webSocketChannel?.closeCode != status.normalClosure) {
-              completer.completeError(
-                Exception(
-                  'WebSocket connection closed with code: ${_webSocketChannel?.closeCode}',
-                ),
-              );
-            } else {
-              completer.completeError(
-                Exception(
-                  'The WebSocket stream was closed without explicit confirmation of the connection being established',
-                ),
-              );
-            }
+            completer.completeError(Exception('WebSocket connection closed unexpectedly'));
+          }
+          if (!_manuallyDisconnected &&
+              _webSocketChannel?.closeCode != status.normalClosure) {
+            _scheduleReconnect();
           }
         },
+        cancelOnError: true,
       );
 
-    } catch (e, stackTrace) {
-      await _wsStreamSubscription?.cancel();
-      _wsStreamSubscription = null;
-      _webSocketChannel?.sink.close().catchError((_) {});
-      _webSocketChannel = null;
+      await completer.future;
+    } catch (e) {
+      _scheduleReconnect();
       rethrow;
     }
   }
+
 
   @override
   Future<void> playAudio(String url) async {
@@ -100,17 +108,19 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
 
   @override
   Future<void> disconnectWebSocket() async {
-    if (_webSocketChannel == null && _wsStreamSubscription == null) {
-      return;
-    }
+    _manuallyDisconnected = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+
     await _wsStreamSubscription?.cancel();
     _wsStreamSubscription = null;
     try {
       await _webSocketChannel?.sink.close(status.normalClosure);
-    } catch (e) {}
+    } catch (_) {}
     _webSocketChannel = null;
     await _webSocketController.close();
   }
+
 
   @override
   Future<void> connectTcp(String host, int port) async {
@@ -145,4 +155,19 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
     await disconnectWebSocket();
     await disconnectTcp();
   }
+
+  void _scheduleReconnect() {
+    _reconnectTimer?.cancel();
+
+    if (_lastWebSocketUrl == null || _manuallyDisconnected) return;
+
+    _reconnectTimer = Timer(const Duration(seconds: 10), () async {
+      try {
+        await connectWebSocket(_lastWebSocketUrl!);
+      } catch (_) {
+        _scheduleReconnect();
+      }
+    });
+  }
+
 }
