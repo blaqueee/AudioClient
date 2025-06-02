@@ -6,7 +6,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.0-70.0.dev
+  sdk: ^3.4.0-70.0.dev
 
 dependencies:
   flutter:
@@ -16,9 +16,8 @@ dependencies:
   get_it: ^7.6.4
   logger: ^2.0.2
   cupertino_icons: ^1.0.8
-  just_audio: ^0.10.3
-  just_audio_media_kit: ^2.1.0
-  media_kit_libs_windows_audio: ^1.0.9
+  just_audio: ^0.9.46
+  just_audio_windows: ^0.2.2
   audio_session: ^0.1.14
   shared_preferences: ^2.0.17
   dio: ^5.0.3

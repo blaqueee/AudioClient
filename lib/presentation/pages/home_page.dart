@@ -46,7 +46,7 @@ class _HomePageState extends State<HomePage> {
       String httpUrl = getHttpFromWs(_wsController.text);
       dio.options.baseUrl = httpUrl;
     });
-    _wsController.text = 'ws://172.18.23.43:8080/open-platform-demo/web-socket-endpoint';
+    _wsController.text = 'ws://localhost:8080/audio/web-socket-endpoint';
 
     _tcpController.text = 'localhost:12346';
 
