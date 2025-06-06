@@ -18,7 +18,7 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
   WebSocketChannel? _webSocketChannel;
   Socket? _tcpSocket;
   StreamSubscription? _wsStreamSubscription;
-  final _webSocketController = StreamController<dynamic>.broadcast();
+  var _webSocketController = StreamController<dynamic>.broadcast();
   Timer? _reconnectTimer;
   String? _lastWebSocketUrl;
   bool _manuallyDisconnected = false;
@@ -31,6 +31,10 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
 
   @override
   Future<void> connectWebSocket(String url) async {
+    if (_webSocketController.isClosed) {
+      _webSocketController = StreamController<dynamic>.broadcast();
+    }
+
     await dataSource.signIn(url: url);
 
     _lastWebSocketUrl = url;
@@ -118,7 +122,6 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
       await _webSocketChannel?.sink.close(status.normalClosure);
     } catch (_) {}
     _webSocketChannel = null;
-    await _webSocketController.close();
   }
 
 
@@ -154,6 +157,9 @@ class ConnectionRepositoryImpl implements ConnectionRepository {
   Future<void> disconnectAll() async {
     await disconnectWebSocket();
     await disconnectTcp();
+    if (!_webSocketController.isClosed) {
+      await _webSocketController.close();
+    }
   }
 
   void _scheduleReconnect() {
