@@ -180,18 +180,18 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  SizedBox(
-                    height: 50,
-                    child: TextField(
-                      controller: _tcpController,
-                      decoration: const InputDecoration(
-                        labelText: 'TCP Address (host:port)',
-                        border: OutlineInputBorder(),
-                      ),
-                      enabled: canInteract,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  // SizedBox(
+                  //   height: 50,
+                  //   child: TextField(
+                  //     controller: _tcpController,
+                  //     decoration: const InputDecoration(
+                  //       labelText: 'TCP Address (host:port)',
+                  //       border: OutlineInputBorder(),
+                  //     ),
+                  //     enabled: canInteract,
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 16),
 
                   SizedBox(
                     height: 60,
@@ -226,16 +226,16 @@ class _HomePageState extends State<HomePage> {
                       child: Text('Error WS: ${state.wsError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
                     ),
                   const SizedBox(height: 8),
-                  Text(
-                    'TCP Socket: ${_statusToString(state.tcpStatus)} ${state.tcpAddress != null && state.tcpStatus == SocketStatus.connected ? "(${state.tcpAddress})" : ""}',
-                    style: TextStyle(fontSize: 16, color: state.tcpStatus == SocketStatus.error ? Colors.red : Colors.black87),
-                    textAlign: TextAlign.center,
-                  ),
-                  if (state.tcpStatus == SocketStatus.error && state.tcpError != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text('Error TCP: ${state.tcpError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
-                    ),
+                  // Text(
+                  //   'TCP Socket: ${_statusToString(state.tcpStatus)} ${state.tcpAddress != null && state.tcpStatus == SocketStatus.connected ? "(${state.tcpAddress})" : ""}',
+                  //   style: TextStyle(fontSize: 16, color: state.tcpStatus == SocketStatus.error ? Colors.red : Colors.black87),
+                  //   textAlign: TextAlign.center,
+                  // ),
+                  // if (state.tcpStatus == SocketStatus.error && state.tcpError != null)
+                  //   Padding(
+                  //     padding: const EdgeInsets.only(top: 4.0),
+                  //     child: Text('Error TCP: ${state.tcpError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
+                  //   ),
                   if (state.isFullyConnected && state.activeListItem != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
