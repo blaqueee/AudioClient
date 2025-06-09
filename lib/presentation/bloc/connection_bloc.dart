@@ -66,24 +66,25 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
       emit(state.copyWith(wsStatus: SocketStatus.error, wsError: e.toString()));
     }
 
-    bool tcpSuccess = false;
-    try {
-      await repository.connectTcp(host, port);
-      tcpSuccess = true;
-      emit(state.copyWith(
-          tcpStatus: SocketStatus.connected,
-          tcpAddress: tcpAddressString));
-    } catch (e) {
-      emit(state.copyWith(tcpStatus: SocketStatus.error, tcpError: e.toString()));
-    }
+    // bool tcpSuccess = false;
+    // try {
+    //   await repository.connectTcp(host, port);
+    //   tcpSuccess = true;
+    //   emit(state.copyWith(
+    //       tcpStatus: SocketStatus.connected,
+    //       tcpAddress: tcpAddressString));
+    // } catch (e) {
+    //   emit(state.copyWith(tcpStatus: SocketStatus.error, tcpError: e.toString()));
+    // }
 
-    if (!wsSuccess && !tcpSuccess) {
+    // if (!wsSuccess && !tcpSuccess) {
       // Error TODO
-    } else if (!wsSuccess) {
-      // Error TODO
-    } else if (!tcpSuccess) {
+    if (!wsSuccess) {
       // Error TODO
     }
+    // else if (!tcpSuccess) {
+    //   // Error TODO
+    // }
   }
 
   Future<void> _performDisconnect(Emitter<ConnectionStatusState> emit) async {

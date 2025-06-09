@@ -44,14 +44,21 @@ class ConnectionStatusState {
     );
   }
 
-  bool get isFullyConnected => wsStatus == SocketStatus.connected && tcpStatus == SocketStatus.connected;
-  bool get isAnyConnecting => wsStatus == SocketStatus.connecting || tcpStatus == SocketStatus.connecting;
+  bool get isFullyConnected => wsStatus == SocketStatus.connected;
+  // bool get isFullyConnected => wsStatus == SocketStatus.connected && tcpStatus == SocketStatus.connected;
+  bool get isAnyConnecting => wsStatus == SocketStatus.connecting;
+  // bool get isAnyConnecting => wsStatus == SocketStatus.connecting || tcpStatus == SocketStatus.connecting;
   bool get isAnythingActiveOrConnecting =>
       wsStatus == SocketStatus.connected ||
-          wsStatus == SocketStatus.connecting ||
-          tcpStatus == SocketStatus.connected ||
-          tcpStatus == SocketStatus.connecting;
+          wsStatus == SocketStatus.connecting;
+  // bool get isAnythingActiveOrConnecting =>
+  //     wsStatus == SocketStatus.connected ||
+  //         wsStatus == SocketStatus.connecting ||
+  //         tcpStatus == SocketStatus.connected ||
+  //         tcpStatus == SocketStatus.connecting;
   bool get isNothingConnectedAnymore =>
-      (wsStatus == SocketStatus.initial || wsStatus == SocketStatus.disconnected || wsStatus == SocketStatus.error) &&
-          (tcpStatus == SocketStatus.initial || tcpStatus == SocketStatus.disconnected || tcpStatus == SocketStatus.error);
+      (wsStatus == SocketStatus.initial || wsStatus == SocketStatus.disconnected || wsStatus == SocketStatus.error);
+  // bool get isNothingConnectedAnymore =>
+  //     (wsStatus == SocketStatus.initial || wsStatus == SocketStatus.disconnected || wsStatus == SocketStatus.error) &&
+  //         (tcpStatus == SocketStatus.initial || tcpStatus == SocketStatus.disconnected || tcpStatus == SocketStatus.error);
 }
