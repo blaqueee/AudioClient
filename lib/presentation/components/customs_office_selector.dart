@@ -1,5 +1,6 @@
 import 'package:audio_client/presentation/components/customs_office_tree.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class CustomsOfficeSelector extends StatefulWidget {
   final void Function(String id, String label)? onSelectionChanged;
@@ -39,12 +40,12 @@ class _CustomsOfficeSelectorState extends State<CustomsOfficeSelector> {
     return InkWell(
       onTap: _openTreeDialog,
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Placement',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          labelText: AppLocalizations.of(context)!.placement,
+          border: const OutlineInputBorder(),
         ),
         child: Text(
-          selectedLabel ?? 'Select placement',
+          selectedLabel ?? AppLocalizations.of(context)!.selectPlacement,
           style: TextStyle(
             color: selectedLabel == null ? Colors.grey : Colors.black87,
           ),
