@@ -1,6 +1,6 @@
-# audio_client
+# Alert System
 
-Client application for playing sounds
+Client application for notification system
 
 ## Getting Started
 

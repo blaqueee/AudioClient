@@ -3,6 +3,7 @@ import 'package:audio_client/presentation/bloc/customs_office_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_treeview/flutter_treeview.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class CustomsOfficeTree extends StatelessWidget {
   const CustomsOfficeTree({super.key});
@@ -10,7 +11,7 @@ class CustomsOfficeTree extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Select placement'),
+      title: Text(AppLocalizations.of(context)!.selectPlacement),
       content: SizedBox(
         width: 400,
         height: 300,
@@ -42,7 +43,7 @@ class CustomsOfficeTree extends StatelessWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(AppLocalizations.of(context)!.cancel),
         )
       ],
     );

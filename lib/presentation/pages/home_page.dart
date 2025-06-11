@@ -4,6 +4,7 @@ import 'package:audio_client/core/services/dio_service.dart';
 import 'package:audio_client/core/utils/methods.dart';
 import 'package:audio_client/di.dart';
 import 'package:audio_client/domain/repositories/connection_repository.dart';
+import 'package:audio_client/presentation/bloc/connection_bloc.dart';
 import 'package:audio_client/presentation/bloc/connection_event.dart';
 import 'package:audio_client/presentation/bloc/connection_state.dart';
 import 'package:audio_client/presentation/bloc/websocket_bloc.dart';
@@ -12,9 +13,9 @@ import 'package:audio_client/presentation/components/customs_office_selector.dar
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_treeview/flutter_treeview.dart';
 
-import '../bloc/connection_bloc.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -67,38 +68,23 @@ class _HomePageState extends State<HomePage> {
     final String tcpAddress = _tcpController.text.trim();
 
     if (wsUrl.isEmpty) {
-      _showErrorSnackbar('Please, enter WS address');
+      _showErrorSnackbar(AppLocalizations.of(context)!.enterWsAddress);
       return;
     }
     if (tcpAddress.isEmpty) {
-      _showErrorSnackbar('Please, enter TCP address (host:port)');
+      _showErrorSnackbar(AppLocalizations.of(context)!.enterTcpAddress);
       return;
     }
     if (_selectedCustomsOfficeId == null || _selectedCustomsOfficeId!.isEmpty) {
-      _showErrorSnackbar('Please, select from the tree');
+      _showErrorSnackbar(AppLocalizations.of(context)!.selectFromTree);
       return;
     }
     if (!_isValidTcpAddress(tcpAddress)) {
-      _showErrorSnackbar('Invalid TCP format. Expected host:port and integer port');
+      _showErrorSnackbar(AppLocalizations.of(context)!.invalidTcpFormat);
       return;
     }
 
     _connectionBloc.add(ConnectAllRequested(
-      wsUrl: wsUrl,
-      tcpAddress: tcpAddress,
-      selectedListItem: _selectedCustomsOfficeId!,
-    ));
-  }
-
-  void _handleReconnect() {
-    final String wsUrl = _wsController.text.trim();
-    final String tcpAddress = _tcpController.text.trim();
-
-    if (wsUrl.isEmpty || tcpAddress.isEmpty || _selectedCustomsOfficeId == null || _selectedCustomsOfficeId!.isEmpty || !_isValidTcpAddress(tcpAddress)) {
-      _showErrorSnackbar('All fields must be filled correctly');
-      return;
-    }
-    _connectionBloc.add(ReconnectAllRequested(
       wsUrl: wsUrl,
       tcpAddress: tcpAddress,
       selectedListItem: _selectedCustomsOfficeId!,
@@ -125,12 +111,12 @@ class _HomePageState extends State<HomePage> {
 
   String _statusToString(SocketStatus status) {
     switch (status) {
-      case SocketStatus.initial: return 'Not connected';
-      case SocketStatus.connecting: return 'Connecting...';
-      case SocketStatus.connected: return 'Connected';
-      case SocketStatus.disconnected: return 'Disconnected';
-      case SocketStatus.error: return 'Error';
-      default: return 'Unknown';
+      case SocketStatus.initial: return AppLocalizations.of(context)!.notConnected;
+      case SocketStatus.connecting: return AppLocalizations.of(context)!.connecting;
+      case SocketStatus.connected: return AppLocalizations.of(context)!.connected;
+      case SocketStatus.disconnected: return AppLocalizations.of(context)!.disconnected;
+      case SocketStatus.error: return AppLocalizations.of(context)!.error;
+      default: return AppLocalizations.of(context)!.unknown;
     }
   }
 
@@ -160,8 +146,8 @@ class _HomePageState extends State<HomePage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Audio client application',
+                  Text(
+                    AppLocalizations.of(context)!.appTitle,
                     style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
@@ -206,24 +192,23 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(height: 24),
 
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildButton('Connect', _handleConnect, enabled: canConnect),
-                      _buildButton('Reconnect', _handleReconnect, enabled: canReconnect),
-                      _buildButton('Disconnect', _handleDisconnect, enabled: canDisconnect),
+                      _buildButton(AppLocalizations.of(context)!.buttonConnect, _handleConnect, enabled: canConnect),
+                      _buildButton(AppLocalizations.of(context)!.buttonDisconnect, _handleDisconnect, enabled: canDisconnect),
                     ],
                   ),
                   const SizedBox(height: 20),
 
                   Text(
-                    'WebSocket: ${_statusToString(state.wsStatus)} ${state.wsUrl != null && state.wsStatus == SocketStatus.connected ? "(${state.wsUrl})" : ""}',
+                    '${AppLocalizations.of(context)!.webSocket}: ${_statusToString(state.wsStatus)}',
                     style: TextStyle(fontSize: 16, color: state.wsStatus == SocketStatus.error ? Colors.red : Colors.black87),
                     textAlign: TextAlign.center,
                   ),
                   if (state.wsStatus == SocketStatus.error && state.wsError != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 4.0),
-                      child: Text('Error WS: ${state.wsError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
+                      child: Text('${AppLocalizations.of(context)!.errorWs}: ${state.wsError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
                     ),
                   const SizedBox(height: 8),
                   // Text(
@@ -239,7 +224,7 @@ class _HomePageState extends State<HomePage> {
                   if (state.isFullyConnected && state.activeListItem != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
-                      child: Text('Active profile: ${state.activeListItem}', style: const TextStyle(fontSize: 14, color: Colors.deepPurple), textAlign: TextAlign.center),
+                      child: Text('${AppLocalizations.of(context)!.activeProfile}: ${state.activeListItem}', style: const TextStyle(fontSize: 14, color: Colors.deepPurple), textAlign: TextAlign.center),
                     ),
                 ],
               );
@@ -257,6 +242,7 @@ class _HomePageState extends State<HomePage> {
       child: ElevatedButton(
         onPressed: enabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.only(left: 15, right: 15),
           backgroundColor: enabled ? Colors.deepPurple[100] : Colors.grey[300],
           foregroundColor: enabled ? Colors.deepPurple : Colors.grey[700],
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
