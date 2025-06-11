@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_treeview/flutter_treeview.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class CustomsOfficeTree extends StatelessWidget {
   const CustomsOfficeTree({super.key});
@@ -35,6 +36,26 @@ class CustomsOfficeTree extends StatelessWidget {
                     });
                   }
                 },
+                nodeBuilder: (context, node) {
+                  final isExpanded = node.expanded;
+
+                  return Row(
+                    children: [
+                      FaIcon(
+                        isExpanded ? FontAwesomeIcons.folderOpen : FontAwesomeIcons.folder,
+                        size: 20,
+                        color: Colors.black,
+                      ),
+                      const SizedBox(width: 8, height: 32),
+                      Expanded(
+                        child: Text(
+                          node.label,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  );
+                }
               );
             },
           ),
