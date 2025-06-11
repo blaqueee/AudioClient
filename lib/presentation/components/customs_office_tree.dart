@@ -22,7 +22,7 @@ class CustomsOfficeTree extends StatelessWidget {
               return TreeView(
                 controller: controller,
                 allowParentSelect: true,
-                supportParentDoubleTap: false,
+                supportParentDoubleTap: true,
                 onNodeTap: (key) {
                   context.read<CustomsOfficeTreeCubit>().toggleNode(key);
                 },
