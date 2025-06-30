@@ -16,6 +16,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_treeview/flutter_treeview.dart';
 
+import '../../audio_stream_manager.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
 
   late final ConnectionBloc _connectionBloc;
   late final WebSocketBloc _webSocketBloc;
+  AudioStreamManager? _audioManager;
   StreamSubscription? _webSocketSubscription;
 
   @override
@@ -47,9 +49,9 @@ class _HomePageState extends State<HomePage> {
       String httpUrl = getHttpFromWs(_wsController.text);
       dio.options.baseUrl = httpUrl;
     });
-    _wsController.text = 'ws://localhost:8080/audio/web-socket-endpoint';
+    _wsController.text = 'ws://192.168.11.135:8080/audio/web-socket-endpoint';
 
-    _tcpController.text = 'localhost:12346';
+    _tcpController.text = '192.168.11.135:9000';
 
     _setupWebSocketListener();
   }
@@ -57,7 +59,7 @@ class _HomePageState extends State<HomePage> {
   void _setupWebSocketListener() {
     final repository = getIt<ConnectionRepository>();
     _webSocketSubscription = repository.webSocketStream.listen(
-      (message) {
+          (message) {
         _webSocketBloc.add(WebSocketMessageReceived(message.toString()));
       },
     );
@@ -89,9 +91,12 @@ class _HomePageState extends State<HomePage> {
       tcpAddress: tcpAddress,
       selectedListItem: _selectedCustomsOfficeId!,
     ));
+
+    _startAudioStreaming(_selectedCustomsOfficeId!);
   }
 
   void _handleDisconnect() {
+    _stopAudioStreaming();
     _connectionBloc.add(DisconnectAllRequested());
   }
 
@@ -103,12 +108,6 @@ class _HomePageState extends State<HomePage> {
     return true;
   }
 
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
-    );
-  }
-
   String _statusToString(SocketStatus status) {
     switch (status) {
       case SocketStatus.initial: return AppLocalizations.of(context)!.notConnected;
@@ -118,6 +117,12 @@ class _HomePageState extends State<HomePage> {
       case SocketStatus.error: return AppLocalizations.of(context)!.error;
       default: return AppLocalizations.of(context)!.unknown;
     }
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
@@ -166,28 +171,28 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // SizedBox(
-                  //   height: 50,
-                  //   child: TextField(
-                  //     controller: _tcpController,
-                  //     decoration: const InputDecoration(
-                  //       labelText: 'TCP Address (host:port)',
-                  //       border: OutlineInputBorder(),
-                  //     ),
-                  //     enabled: canInteract,
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 16),
+                  SizedBox(
+                    height: 50,
+                    child: TextField(
+                      controller: _tcpController,
+                      decoration: const InputDecoration(
+                        labelText: 'TCP Address (host:port)',
+                        border: OutlineInputBorder(),
+                      ),
+                      enabled: canInteract,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   SizedBox(
-                    height: 60,
-                    child: CustomsOfficeSelector(
-                      onSelectionChanged: (label, id) {
-                        setState(() {
-                          _selectedCustomsOfficeId = id;
-                        });
-                      },
-                    )
+                      height: 60,
+                      child: CustomsOfficeSelector(
+                        onSelectionChanged: (label, id) {
+                          setState(() {
+                            _selectedCustomsOfficeId = id;
+                          });
+                        },
+                      )
                   ),
                   const SizedBox(height: 24),
 
@@ -211,16 +216,16 @@ class _HomePageState extends State<HomePage> {
                       child: Text('${AppLocalizations.of(context)!.errorWs}: ${state.wsError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
                     ),
                   const SizedBox(height: 8),
-                  // Text(
-                  //   'TCP Socket: ${_statusToString(state.tcpStatus)} ${state.tcpAddress != null && state.tcpStatus == SocketStatus.connected ? "(${state.tcpAddress})" : ""}',
-                  //   style: TextStyle(fontSize: 16, color: state.tcpStatus == SocketStatus.error ? Colors.red : Colors.black87),
-                  //   textAlign: TextAlign.center,
-                  // ),
-                  // if (state.tcpStatus == SocketStatus.error && state.tcpError != null)
-                  //   Padding(
-                  //     padding: const EdgeInsets.only(top: 4.0),
-                  //     child: Text('Error TCP: ${state.tcpError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
-                  //   ),
+                  Text(
+                    'TCP Socket: ${_statusToString(state.tcpStatus)} ${state.tcpAddress != null && state.tcpStatus == SocketStatus.connected ? "(${state.tcpAddress})" : ""}',
+                    style: TextStyle(fontSize: 16, color: state.tcpStatus == SocketStatus.error ? Colors.red : Colors.black87),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (state.tcpStatus == SocketStatus.error && state.tcpError != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text('Error TCP: ${state.tcpError}', style: const TextStyle(fontSize: 12, color: Colors.red), textAlign: TextAlign.center),
+                    ),
                   if (state.isFullyConnected && state.activeListItem != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
@@ -257,6 +262,36 @@ class _HomePageState extends State<HomePage> {
     _wsController.dispose();
     _tcpController.dispose();
     _webSocketSubscription?.cancel();
+    _stopAudioStreaming();
     super.dispose();
+  }
+
+  Future<void> _startAudioStreaming(String customsOfficeId) async {
+    await _audioManager?.disconnect();
+
+    final tcpParts = _tcpController.text.trim().split(':');
+    if (tcpParts.length != 2) {
+      throw Exception('Неверный формат TCP адреса: ${_tcpController.text}');
+    }
+
+    final host = tcpParts[0];
+    final port = int.tryParse(tcpParts[1]);
+    if (port == null) {
+      throw Exception('Некорректный порт в TCP адресе: ${_tcpController.text}');
+    }
+
+    _audioManager = AudioStreamManager(
+      serverHost: host,
+      serverPort: port,
+      customsofficeId: customsOfficeId,
+      connectionBloc: _connectionBloc,
+      tcpAddress: _tcpController.text.trim(),
+    );
+
+    await _audioManager?.connectAndListen();
+  }
+
+  Future<void> _stopAudioStreaming() async {
+    await _audioManager?.disconnect();
   }
 }

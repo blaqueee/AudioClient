@@ -15,6 +15,7 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
     on<ConnectAllRequested>(_onConnectAllRequested);
     on<ReconnectAllRequested>(_onReconnectAllRequested);
     on<DisconnectAllRequested>(_onDisconnectAllRequested);
+    on<ConnectionTcpConnected>(_onConnectionTcpConnected);
   }
 
   Future<void> _performConnect(
@@ -66,25 +67,9 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
       emit(state.copyWith(wsStatus: SocketStatus.error, wsError: e.toString()));
     }
 
-    // bool tcpSuccess = false;
-    // try {
-    //   await repository.connectTcp(host, port);
-    //   tcpSuccess = true;
-    //   emit(state.copyWith(
-    //       tcpStatus: SocketStatus.connected,
-    //       tcpAddress: tcpAddressString));
-    // } catch (e) {
-    //   emit(state.copyWith(tcpStatus: SocketStatus.error, tcpError: e.toString()));
-    // }
-
-    // if (!wsSuccess && !tcpSuccess) {
-      // Error TODO
     if (!wsSuccess) {
       // Error TODO
     }
-    // else if (!tcpSuccess) {
-    //   // Error TODO
-    // }
   }
 
   Future<void> _performDisconnect(Emitter<ConnectionStatusState> emit) async {
@@ -135,5 +120,9 @@ class ConnectionBloc extends Bloc<ConnectionEvent, ConnectionStatusState> {
     await Future.delayed(const Duration(milliseconds: 50));
 
     await _performConnect(event.wsUrl, event.tcpAddress, event.selectedListItem, emit);
+  }
+
+  void _onConnectionTcpConnected(ConnectionTcpConnected event, Emitter<ConnectionStatusState> emit) {
+    emit(state.copyWith(tcpStatus: SocketStatus.connected, tcpAddress: event.tcpAddress));
   }
 }
